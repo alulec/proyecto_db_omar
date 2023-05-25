@@ -54,3 +54,23 @@ END //
 DELIMITER ;
 insert into consumo values ("00023450074",'2023-08-23', 2, "C", -12);
 
+CREATE PROCEDURE calcular_consumo_diario
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    INSERT INTO concentrador_consumo(fecha, nombre_tienda, tipo_movimiento, total_consumo_cancelacion)
+    SELECT 
+        CONVERT(date, GETDATE()), 
+        t.nombre, 
+        c.tipo_movimiento, 
+        SUM(c.cantidad) 
+    FROM 
+        tienda t 
+        INNER JOIN consumo c ON t.id_tienda = c.id_tienda 
+    WHERE 
+        CONVERT(date, c.fecha) = CONVERT(date, GETDATE()) 
+    GROUP BY 
+        t.nombre, 
+        c.tipo_movimiento;
+END
