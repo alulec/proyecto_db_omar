@@ -236,3 +236,20 @@ BEGIN
 END //
 DELIMITER ;
 insert into consumo values ("00023450074",'2023-08-23', 2, "C", -12);
+
+/*
+6) Crear una vista que muestre el detalle completo del concentrado de ventas 
+*/
+create view vista_ventas as select consumo.importe from consumo where movimiento = "V";
+/*
+8) Crear una vista que muestre el detalle completo del concentrado de ventas por
+	tipo de tienda 
+*/
+create view sum_ventas as select consumo.importe from consumo where tiendano = "";
+/*
+9) Generar un usuario que solo pueda acceder a las dos vistas anteriores
+*/
+create user 'usuarioView'@'localhost' identified by '789546%';
+grant view on credito.vista_ventas to 'usuarioView'@'localhost';
+grant view on credito.sum_ventas to 'usuarioView'@'localhost';
+
