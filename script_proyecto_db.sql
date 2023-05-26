@@ -1,52 +1,64 @@
+/* Nombre de los integrantes:
+	Alexis Jesus Cordova de la Cruz
+	Marcial González Jaime Omar
+    Javier Espinosa Gómez
+*/
+
+-- Iniciamos la base de datos de credito
 use Credito;
+
 -- 1) Crear dos usuario para la base Crédito
 create user 'usuario1'@'localhost' identified by '123456%';
 create user 'usuario2'@'localhost' identified by '12345%';
 
-/* 
-a) Un usuario solo puede realizar lecturas en toda las tablas y no puede realizar
-mas de 20 consultas por hora
-*/
+/*  a) Un usuario solo puede realizar lecturas en toda las tablas y no puede realizar
+mas de 20 consultas por hora.  */
 grant select on credito.* to 'usuario1'@'localhost';
 ALTER USER 'usuario1'@'localhost' WITH MAX_QUERIES_PER_HOUR 20;
+FLUSH PRIVILEGES;
 
-/* 
-b) El otro usuario escribir y leer en todas las tablas de la base y no puede tener
-mas de 3 conexiones concurrentes ni hacer ningún movimiento DDL
-*/
+
+/* b) El otro usuario escribir y leer en todas las tablas de la base y no puede tener
+mas de 3 conexiones concurrentes ni hacer ningún movimiento DDL. */
 grant insert on credito.* to 'usuario2'@'localhost';
 grant select on credito.* to 'usuario2'@'localhost';
-ALTER USER 'operador1'@'localhost' with max_connections_per_hour 3;
+ALTER USER 'operador1'@'localhost' WITH MAX_USER_CONNECTIONS 3;
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'usuario1'@'localhost';
+REVOKE CREATE, ALTER, DROP, TRUNCATE ON *.* FROM 'usuario1'@'localhost';
+FLUSH PRIVILEGES;
 
-/*
-2) Generar un procedimiento almacenado que calcule el consumo diario por tienda y
+/* 2) Generar un procedimiento almacenado que calcule el consumo diario por tienda y
 movimiento y lo agregue a una tabla llamada concentradro_consumo que debe
-tener fecha, nombre y timo de tienda y el total de consumos o cancelaciones
-*/
-CREATE PROCEDURE calcular_consumo_diario
-AS
+tener fecha, nombre y timo de tienda y el total de consumos o cancelaciones */
+
+DELIMITER //
+CREATE PROCEDURE calcular_consumo_diariodos()
 BEGIN
-    SET NOCOUNT ON;
+	-- Crear la tabla 'concentrador_consumo' si no existe
+    CREATE TABLE IF NOT EXISTS concentrado_consumo (
+        fecha DATE,
+        nombre VARCHAR(100),
+        tiendano VARCHAR(100),
+        importe INT);
     
-    INSERT INTO concentrador_consumo(fecha, nombre_tienda, tipo_movimiento, total_consumo_cancelacion)
-    SELECT 
-        CONVERT(date, GETDATE()), 
-        t.nombre, 
-        c.tipo_movimiento, 
-        SUM(c.cantidad) 
-    FROM 
-        tienda t 
-        INNER JOIN consumo c ON t.id_tienda = c.id_tienda 
-    WHERE 
-        CONVERT(date, c.fecha) = CONVERT(date, GETDATE()) 
-    GROUP BY 
-        t.nombre, 
-        c.tipo_movimiento;
-END
-/*
-3) Generar un procedimiento almacenado que regrese el consumo total por tienda y
-los datos del empleado, recibiendo como entrada solo el numero de empleado
-*/
+    -- Insertar los valores en la tabla 'concentrador_consumo' desde consumo
+        INSERT INTO concentrado_consumo (fecha, nombre, tiendano, importe)
+		SELECT fecha, tnombre, tiendano, importe
+		fROM consumo, tienda;
+        
+	-- Insertar los valores en la tabla 'concentrador_consumo' desde tienda
+     /*INSERT INTO concentrado_consumo (nombre)
+		SELECT tnombre
+		fROM tienda;*/
+        
+        -- Observar la tabla concentrado_consumo
+        select * from concentrado_consumo;
+END //
+DELIMITER ;
+
+
+/*3) Generar un procedimiento almacenado que regrese el consumo total por tienda y
+los datos del empleado, recibiendo como entrada solo el numero de empleado */
 DELIMITER $$
 DROP PROCEDURE IF EXISTS consumoPorTiendaAndDatosEmpleado $$
 CREATE PROCEDURE consumoPorTiendaAndDatosEmpleado(IN numeroEmpleado int)
