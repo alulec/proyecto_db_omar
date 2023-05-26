@@ -8,23 +8,18 @@
 use Credito;
 
 -- 1) Crear dos usuario para la base Crédito
-create user 'usuario1'@'localhost' identified by '123456%';
-create user 'usuario2'@'localhost' identified by '12345%';
+create user 'usuario1'@'localhost' identified by '123456%' WITH MAX_QUERIES_PER_HOUR 20;
+create user 'usuario2'@'localhost' identified by '12345%' WITH MAX_USER_CONNECTIONS 3;
 
 /*  a) Un usuario solo puede realizar lecturas en toda las tablas y no puede realizar
 mas de 20 consultas por hora.  */
 grant select on credito.* to 'usuario1'@'localhost';
-ALTER USER 'usuario1'@'localhost' WITH MAX_QUERIES_PER_HOUR 20;
-FLUSH PRIVILEGES;
-
 
 /* b) El otro usuario escribir y leer en todas las tablas de la base y no puede tener
 mas de 3 conexiones concurrentes ni hacer ningún movimiento DDL. */
 grant insert on credito.* to 'usuario2'@'localhost';
 grant select on credito.* to 'usuario2'@'localhost';
-ALTER USER 'operador1'@'localhost' WITH MAX_USER_CONNECTIONS 3;
-GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'usuario1'@'localhost';
-REVOKE CREATE, ALTER, DROP, TRUNCATE ON *.* FROM 'usuario1'@'localhost';
+
 FLUSH PRIVILEGES;
 
 /* 2) Generar un procedimiento almacenado que calcule el consumo diario por tienda y
@@ -55,16 +50,25 @@ CALL calculo_consumo_diario;
 los datos del empleado, recibiendo como entrada solo el numero de empleado */
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS tienda_empleado_calculo $$
-CREATE PROCEDURE tienda_empleado_calculo()
+DROP PROCEDURE IF EXISTS consumoTotalDatosEmpleados $$
+CREATE PROCEDURE consumoTotalDatosEmpleados(IN n SMALLINT)
 BEGIN
-     SELECT empno, tiendano, importe
-        FROM empleado, consumo 
-        GROUP BY empno, tiendano, importe;
-END $$
+    SELECT empleado.*, SUM(consumo.importe * CASE 
+						WHEN consumo.movimiento='V' THEN 1
+						WHEN consumo.movimiento='C' THEN -1
+                        ELSE 0 END) consumo_total,
+	puesto.pnombre, tienda.tipo tipo_tienda, tienda.tnombre nombre_tienda
+	FROM consumo 
+	LEFT JOIN tienda on consumo.tiendano = tienda.tiendano
+	LEFT JOIN cuenta on consumo.cuentano = cuenta.cuentano
+	LEFT JOIN empleado on cuenta.empno = empleado.empno
+	LEFT JOIN puesto on empleado.puestono = puesto.puestono
+	WHERE empleado.empno = n 
+	GROUP BY consumo.tiendano, empleado.empno;
+END$$
 DELIMITER ;
--- Ejecutamos el procedimiento almecenado
-CALL tienda_empleado_calculo();
+
+call consumoTotalDatosEmpleados(12003);
 
 /*  4) Generar un trigger que guarden en una bitácora los registros eliminados o
 actualizados de consumo, cuenta, empleado, tarjeta tienda. */
@@ -238,7 +242,7 @@ DELIMITER ;
 insert into consumo values ("00023450074",'2023-08-23', 2, "C", -12);
 
 /*
-6) Crear una vista que muestre el detalle completo del concentrado de ventas 
+7) Crear una vista que muestre el detalle completo del concentrado de ventas 
 */
 create view vista_ventas as select consumo.importe from consumo where movimiento = "V";
 /*
@@ -252,4 +256,3 @@ create view sum_ventas as select consumo.importe from consumo where tiendano = "
 create user 'usuarioView'@'localhost' identified by '789546%';
 grant view on credito.vista_ventas to 'usuarioView'@'localhost';
 grant view on credito.sum_ventas to 'usuarioView'@'localhost';
-
