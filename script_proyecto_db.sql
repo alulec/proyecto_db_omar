@@ -31,30 +31,25 @@ FLUSH PRIVILEGES;
 movimiento y lo agregue a una tabla llamada concentradro_consumo que debe
 tener fecha, nombre y timo de tienda y el total de consumos o cancelaciones */
 
-DELIMITER //
+DELIMITER $$
+DROP PROCEDURE IF EXISTS calcular_consumo_diariodos $$
 CREATE PROCEDURE calcular_consumo_diariodos()
 BEGIN
-	-- Crear la tabla 'concentrador_consumo' si no existe
     CREATE TABLE IF NOT EXISTS concentrado_consumo (
         fecha DATE,
-        nombre VARCHAR(100),
-        tiendano VARCHAR(100),
+        nombre VARCHAR(30),
+        tipo varchar(20),
         importe INT);
-    
-    -- Insertar los valores en la tabla 'concentrador_consumo' desde consumo
-        INSERT INTO concentrado_consumo (fecha, nombre, tiendano, importe)
-		SELECT fecha, tnombre, tiendano, importe
-		fROM consumo, tienda;
         
-	-- Insertar los valores en la tabla 'concentrador_consumo' desde tienda
-     /*INSERT INTO concentrado_consumo (nombre)
-		SELECT tnombre
-		fROM tienda;*/
-        
-        -- Observar la tabla concentrado_consumo
+        INSERT INTO concentrado_consumo (fecha, nombre, tipo, importe)
+		SELECT fecha, tnombre, tipo, importe
+		FROM tienda, consumo;
         select * from concentrado_consumo;
-END //
+END $$
 DELIMITER ;
+
+-- Ejecutamos el procedimiento almecenado
+CALL calcular_consumo_diariodos;
 
 
 /*3) Generar un procedimiento almacenado que regrese el consumo total por tienda y
