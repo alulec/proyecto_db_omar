@@ -32,42 +32,42 @@ movimiento y lo agregue a una tabla llamada concentradro_consumo que debe
 tener fecha, nombre y timo de tienda y el total de consumos o cancelaciones */
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS calcular_consumo_diariodos $$
-CREATE PROCEDURE calcular_consumo_diariodos()
+DROP PROCEDURE IF EXISTS calculo_consumo_diario $$
+CREATE PROCEDURE calculo_consumo_diario()
 BEGIN
     CREATE TABLE IF NOT EXISTS concentrado_consumo (
         fecha DATE,
         nombre VARCHAR(30),
         tipo varchar(20),
         importe INT);
-        
+
         INSERT INTO concentrado_consumo (fecha, nombre, tipo, importe)
 		SELECT fecha, tnombre, tipo, importe
 		FROM tienda, consumo;
         select * from concentrado_consumo;
 END $$
 DELIMITER ;
-
 -- Ejecutamos el procedimiento almecenado
-CALL calcular_consumo_diariodos;
+CALL calculo_consumo_diario;
 
 
 /*3) Generar un procedimiento almacenado que regrese el consumo total por tienda y
 los datos del empleado, recibiendo como entrada solo el numero de empleado */
+
 DELIMITER $$
-DROP PROCEDURE IF EXISTS consumoPorTiendaAndDatosEmpleado $$
-CREATE PROCEDURE consumoPorTiendaAndDatosEmpleado(IN numeroEmpleado int)
+DROP PROCEDURE IF EXISTS tienda_empleado_calculo $$
+CREATE PROCEDURE tienda_empleado_calculo()
 BEGIN
-    SELECT deptono FROM empleado where empno like numeroEmpleado;
-END$$
+     SELECT empno, tiendano, importe
+        FROM empleado, consumo 
+        GROUP BY empno, tiendano, importe;
+END $$
 DELIMITER ;
+-- Ejecutamos el procedimiento almecenado
+CALL tienda_empleado_calculo();
 
-call consumoPorTiendaAndDatosEmpleado(12001);
-
-/*
-4) Generar un trigger que guarden en una bitácora los registros eliminados o
-actualizados de consumo, cuenta, empleado, tarjeta tienda
-*/
+/*  4) Generar un trigger que guarden en una bitácora los registros eliminados o
+actualizados de consumo, cuenta, empleado, tarjeta tienda. */
 
 -- punto 04: generar un trigger... bitacora
 drop table if exists bitacora;
