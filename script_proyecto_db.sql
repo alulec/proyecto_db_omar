@@ -49,9 +49,9 @@ BEGIN
     GROUP BY tnombre, fecha, movimiento, tipo;
 END $$
 DELIMITER ;
+-- Ejecutamos el procedimiento almecenado
 CALL consu_tien_diario();
 SELECT * FROM concentrado_consumo;
-
 
 
 /*3) Generar un procedimiento almacenado que regrese el consumo total por tienda y
