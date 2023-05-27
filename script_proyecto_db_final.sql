@@ -23,33 +23,34 @@ mas de 3 conexiones concurrentes ni hacer ningún movimiento DDL. */
 grant insert on credito.* to 'usuario2'@'localhost';
 grant select on credito.* to 'usuario2'@'localhost';
 ALTER USER 'operador1'@'localhost' WITH MAX_USER_CONNECTIONS 3;
-GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'usuario1'@'localhost';
-REVOKE CREATE, ALTER, DROP, TRUNCATE ON *.* FROM 'usuario1'@'localhost';
 FLUSH PRIVILEGES;
 
 /* 2) Generar un procedimiento almacenado que calcule el consumo diario por tienda y
 movimiento y lo agregue a una tabla llamada concentradro_consumo que debe
 tener fecha, nombre y timo de tienda y el total de consumos o cancelaciones */
 
+DROP TABLE IF EXISTS concentrado_consumo;
+CREATE TABLE concentrado_consumo(
+	Fecha DATE, nom_tien VARCHAR(45), tien_tipo VARCHAR(45), consu_total INT, cance_total INT
+);
 DELIMITER $$
-DROP PROCEDURE IF EXISTS calculo_consumo_diario_tienda $$
-CREATE PROCEDURE calculo_consumo_diario_tienda()
+DROP PROCEDURE IF EXISTS consu_tien_diario $$
+CREATE PROCEDURE consu_tien_diario()
 BEGIN
-    CREATE TABLE IF NOT EXISTS concentrado_consumo (
-        fecha DATE,
-        nombre VARCHAR(30),
-        tipo varchar(20),
-        importe INT);
-        
-        INSERT INTO concentrado_consumo_tienda (fecha, nombre, tipo, importe)
-		SELECT fecha, tnombre, tipo, importe
-		FROM tienda, consumo ;
-        select * from concentrado_consumo ;
+    INSERT INTO concentrado_consumo (
+		Fecha, nom_tien, tien_tipo, 
+		consu_total, cance_total
+	)
+    SELECT fecha, tnombre, tipo, SUM(IF(con.movimiento = 'V', con.importe, false)) AS consu_total,
+	SUM(IF(con.movimiento = 'C', con.importe, false)) AS cance_total
+    FROM consumo  con JOIN tienda ti ON con.tiendano = ti.tiendano
+    GROUP BY tnombre, fecha, movimiento, tipo;
 END $$
 DELIMITER ;
 
 -- Ejecutamos el procedimiento almecenado
-CALL calculo_consumo_diario ;
+CALL consu_tien_diario();
+SELECT * FROM concentrado_consumo;
 
 
 /*3) Generar un procedimiento almacenado que regrese el consumo total por tienda y
@@ -70,7 +71,6 @@ CALL tienda_empleado_calculo();
 /*  4) Generar un trigger que guarden en una bitácora los registros eliminados o
 actualizados de consumo, cuenta, empleado, tarjeta tienda. */
 
--- punto 04: generar un trigger... bitacora
 drop table if exists bitacora;
 create table bitacora(
     id int not null auto_increment primary key,
@@ -220,6 +220,12 @@ BEGIN
 END; //
 DELIMITER ;
 
+UPDATE tienda
+SET tipo="patito"
+WHERE tiendano=1;
+
+select * from bitacora;
+
 /* 5) Generar un trigger que valide que no se inserten consumos de venta con importe
 menor a cero */
 DELIMITER // 
@@ -264,5 +270,5 @@ select * from concentrado_ventas_tienda;
 
 drop user 'usuarioView'@'localhost';
 create user 'usuarioView'@'localhost' identified by '789546%';
-grant view on credito.concentrado_ventas to 'usuarioView'@'localhost';
-grant view on credito.concentrado_ventas_tienda to 'usuarioView'@'localhost';
+grant select on credito.concentrado_ventas to 'usuarioView'@'localhost';
+grant select on credito.concentrado_ventas_tienda to 'usuarioView'@'localhost';
